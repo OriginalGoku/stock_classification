@@ -13,6 +13,8 @@ from sklearn.metrics import roc_curve, auc, roc_auc_score
 from sklearn.preprocessing import LabelBinarizer
 from sklearn.metrics import RocCurveDisplay
 from sklearn.neural_network import MLPClassifier
+from sklearn.metrics import classification_report
+
 
 # To save and load models
 from joblib import dump, load
@@ -36,10 +38,10 @@ def check_and_create_folder(path_):
     if not os.path.isdir(path_):
         os.makedirs(path_)
 
+# Testing Git updates
 
 class SupervisedClassifier:
-    def __init__(self, model_path='models', plot_path='plots', no_of_actions=7):
-
+    def __init__(self, model_path='models', plot_path='plots', report_path = 'reports', no_of_actions=7):
         """
         Sequence in this class:
         1. call generate_test_train
@@ -50,6 +52,7 @@ class SupervisedClassifier:
         """
         check_and_create_folder(model_path)
         check_and_create_folder(plot_path)
+        check_and_create_folder(report_path)
 
         self.model_pipeline = []
         self.X_train = None
@@ -70,6 +73,7 @@ class SupervisedClassifier:
                             'Gaussian']
         self.model_path = model_path
         self.plot_path = plot_path
+        self.report_path = report_path
         self.acc_list = []
         self.auc_list = []
         self.confusion_matrix_list = []
@@ -112,7 +116,7 @@ class SupervisedClassifier:
 
     def generate_pipeline(self):
 
-        self.model_pipeline.append(MLPClassifier())
+        self.model_pipeline.append(MLPClassifier(early_stopping=False))
         self.model_pipeline.append(GradientBoostingClassifier())
         self.model_pipeline.append(LogisticRegression(max_iter=2000))
         self.model_pipeline.append(KNeighborsClassifier())
@@ -155,13 +159,23 @@ class SupervisedClassifier:
             print("Saving model ", model_name)
             dump(fitted_model, model_file_name)
 
-            # y_pred = model.predict(self.X_test)
+            y_pred = model.predict(self.X_test)
             model_y_score = fitted_model.predict_proba(self.X_test)
+            report = classification_report(self.y_test, y_pred, target_names=self.target_names, output_dict=True)
+            # print("report: ", report)
+            # print("type(report): ", type(report))
+            print("Saving model results for ", model_name + " Run " + str(global_run_counter))
+            (pd.DataFrame(report).T).to_csv(self.report_path + "/" + model_name + '_Run_' + str(global_run_counter)
+                                            + '_report.csv')
+
             self.y_score.append(model_y_score)
             print("Plotting model results for ", model_name + " Run " + str(global_run_counter))
             self.plot_all_OvR_ROC(model_name + "_Run_" + str(global_run_counter), model_y_score)
 
-            print(model_name, ' y_score: ', model_y_score)
+            # print(model_name, ' y_score[0]: ', model_y_score[0])
+            # print(model_name, ' len (y_score) : ', len(model_y_score))
+            # print(model_name, ' len (y_score[0]) : ', len(model_y_score[0]))
+
             self.line_printer.print_line()
 
 

@@ -24,16 +24,19 @@ class YahooDataLoader:
         original_data.index.rename(self.date_index_new_name, inplace=True)
         original_data.rename(columns=self.column_names, inplace=True)
 
-    def load_file(self, path, file_name):
+    def load_file(self, path, file_name, interval = 1):
         """
 
         :param path: path must include '/'
         :param file_name:
         :param column_names: [open, high, low, close, volume]
         :param data_has_volume: clarify if data has volume information
+        :param interval: It will return data in intervals set by this parameters. so for example if this is set to 2
+        then the data will skip 2 rows for each row it returns
         :return: Pandas DataFrame with ascending sorted pandas datetime index
         """
-
+        if interval < 1:
+            raise ValueError("interval must be greater than 0")
         if (path[-1] != '/'):
             # raise Warning('Path must end with /')
             path = path+'/'
@@ -56,7 +59,8 @@ class YahooDataLoader:
 
             data.name = file_name.replace(file_format, '')[:-1]
             data['action'] = data['action'].astype(int)
-            # print('data[action].dtype', data['action'].dtype)
+
+            data = data.iloc[::interval, :]
             return data
         except:
             print('Could not load ', path, file_name)

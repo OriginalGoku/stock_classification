@@ -77,8 +77,8 @@ if __name__ == '__main__':
         folder_name = list_of_folders[folder_counter]
         list_of_files = file_util.load_file_names_in_directory(folder_name)
         no_of_files_in_folder = len(list_of_files)
-        # for file_counter in tqdm(range(no_of_files_in_folder)):
-        for file_counter in tqdm(range(3)):
+        for file_counter in tqdm(range(no_of_files_in_folder)):
+        # for file_counter in tqdm(range(3)):
             loaded_data = data_loader.load_file(data_path + "/" + folder_name, list_of_files[file_counter])
             total_row_counter += len(loaded_data)
 
