@@ -1,0 +1,11 @@
+## Simple Requirements
+
+numpy
+pandas
+tqdm
+matplotlib
+seaborn
+
+scikit-learn >1.0
+
+pip > 22.3.0
