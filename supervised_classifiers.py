@@ -164,7 +164,8 @@ class SupervisedClassifier:
             report = classification_report(self.y_test, y_pred, target_names=self.target_names, output_dict=True)
             # print("report: ", report)
             # print("type(report): ", type(report))
-            print("Saving model results for ", model_name + " Run " + str(global_run_counter))
+            print("Saving model results as: ", self.report_path + "/" + model_name + '_Run_' + str(global_run_counter)
+                                            + '_report.csv')
             (pd.DataFrame(report).T).to_csv(self.report_path + "/" + model_name + '_Run_' + str(global_run_counter)
                                             + '_report.csv')
 

@@ -39,9 +39,9 @@ if __name__ == '__main__':
 
     line_printer = LinePrinter()
     # no_of_files_to_start_training = 1000
-    min_df_size_to_start_training = 500000
+    min_df_size_to_start_training = 5000
 
-    batch_size_to_load_if_min_df_size_does_not_have_enough_sample_data = 10000
+    batch_size_to_load_if_min_df_size_does_not_have_enough_sample_data = 1000
 
     file_info = {'source_data_path': data_path,
                  'save_destination_path': 'results',
@@ -79,7 +79,7 @@ if __name__ == '__main__':
         no_of_files_in_folder = len(list_of_files)
         for file_counter in tqdm(range(no_of_files_in_folder)):
         # for file_counter in tqdm(range(3)):
-            loaded_data = data_loader.load_file(data_path + "/" + folder_name, list_of_files[file_counter])
+            loaded_data = data_loader.load_file(data_path + "/" + folder_name, list_of_files[file_counter], interval=60)
             total_row_counter += len(loaded_data)
 
             # if there is information available in the file we have just loaded then proceed
