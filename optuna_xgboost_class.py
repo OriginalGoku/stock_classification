@@ -23,13 +23,14 @@ from file_utility import FileUtility
 from load_file import YahooDataLoader
 from line_printer import LinePrinter
 from load_batch_data import BatchDataLoader
-
+from line_printer import LinePrinter
 
 class OptunaXGBoost:
     def __init__(self):
-        self.data_path = '../Drop_Box/Dropbox'
+        #self.data_path = '../Drop_Box/Dropbox'
+        self.data_path = '..\Data_Source\Yahoo\Processed_Yahoo_Data\Stock_Binary_tolerance_half_std\ETF'
         self.sentence_length = 31
-        self.batch_size = 1000
+        self.batch_size = 30000
         interval = 4
 
         self.file_utility_input = {'source_data_path': self.data_path,
@@ -48,10 +49,12 @@ class OptunaXGBoost:
         self.batch_data_loader = BatchDataLoader(**batch_data_loader_input)
         self.data = None
         self.target = None
+        self.line_printer = LinePrinter()
 
     def load_data(self, fetch_randomize_data):
 
         if fetch_randomize_data:
+            #self.line_printer.print_text("We are HERE ")
             data = self.batch_data_loader.fetch_batch_randomized()
         else:
             data, done = self.batch_data_loader.fetch_batch()
@@ -99,6 +102,7 @@ class OptunaXGBoost:
             param["rate_drop"] = trial.suggest_float("rate_drop", 1e-8, 1.0, log=True)
             param["skip_drop"] = trial.suggest_float("skip_drop", 1e-8, 1.0, log=True)
 
+        #self.line_printer.print_text('Starting Optuna with data length: '+ str(len(self.data)))
         # Add a callback for pruning.
         pruning_callback = optuna.integration.XGBoostPruningCallback(trial, "validation-auc")
         bst = xgb.train(param, dtrain, evals=[(dvalid, "validation")], callbacks=[pruning_callback])

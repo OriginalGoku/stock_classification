@@ -93,11 +93,11 @@ class BatchDataLoader:
         row_counter = 0
         # load the data left over from the last function call
         data_to_return = self.data_left_from_previous_call
-        folder_id_range = np.arange(0, len(self.list_of_folders))
+        # folder_id_range = np.arange(0, len(self.list_of_folders))
         # loop through the folder list starting from the last call to the functon
         for idx in tqdm(range(0, len(self.list_of_folders))):
 
-            folder_counter = np.random.choice(len(self.list_of_folders),1)
+            folder_counter = np.random.choice(len(self.list_of_folders), 1)
             folder_name = self.list_of_folders[folder_counter[0]]
 
             list_of_files = self.file_utility.load_file_names_in_directory(folder_name)
@@ -110,8 +110,10 @@ class BatchDataLoader:
                 row_counter += len(loaded_data)
                 data_to_return = pd.concat([data_to_return, loaded_data])
 
-            # if enough data was collected, then return data
-            if row_counter >= self.batch_size:
-                return data_to_return.iloc[:self.batch_size]
+                # if enough data was collected, then return data
+                #print(len(data_to_return))
+                if (len(data_to_return) >= self.batch_size):
+                    self.line_printer.print_text('Returning Data')
+                    return data_to_return.iloc[:self.batch_size]
 
         return data_to_return
