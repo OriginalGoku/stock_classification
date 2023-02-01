@@ -8,13 +8,14 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.ensemble import GradientBoostingClassifier
 # from sklearn.multiclass import OneVsRestClassifier
 from sklearn.svm import SVC
+from sklearn.metrics import confusion_matrix
 from sklearn.naive_bayes import GaussianNB
 from sklearn.metrics import roc_curve, auc, roc_auc_score
 from sklearn.preprocessing import LabelBinarizer
 from sklearn.metrics import RocCurveDisplay
 from sklearn.neural_network import MLPClassifier
 from sklearn.metrics import classification_report
-
+from sklearn.linear_model import SGDClassifier
 
 # To save and load models
 from joblib import dump, load
@@ -38,10 +39,11 @@ def check_and_create_folder(path_):
     if not os.path.isdir(path_):
         os.makedirs(path_)
 
+
 # Testing Git updates
 
 class SupervisedClassifier:
-    def __init__(self, model_path='models', plot_path='plots', report_path = 'reports', no_of_actions=7):
+    def __init__(self, actions: [int], action_description: [str], include_volatility: bool, model_path='models', plot_path='plots', report_path='reports'):
         """
         Sequence in this class:
         1. call generate_test_train
@@ -62,25 +64,22 @@ class SupervisedClassifier:
         self.y_score = []
         self.y_onehot_test = None
 
-        # self.model_list = ['SVM', 'KNN', 'Decision Tree', 'Random Forest', 'Naive Bayes']
-
-        # self.model_names = ['Naive Bayes', 'SVM']
-        # self.model_names = ['Logistic Regression', 'KNN', 'KNN(n_neighbors=10)', 'Decision Tree', 'Random Forest', 'Random Forest (max_features=63)', 'Naive Bayes']
-        # self.model_names = ['Gradient Boosting', 'Logistic Regression', 'KNN', 'KNN(n_neighbors=10)', 'Random Forest', 'Random Forest (max_features=63)']
-        # self.model_names = ['MLP', 'Gradient Boosting', 'Logistic Regression', 'KNN', 'Random Forest']
-        # 'KNN(n_neighbors=10)',, 'Random Forest (max_features=63)'
         self.model_names = ['MLP', 'Gradient Boosting', 'Logistic Regression', 'KNN', 'Random Forest', 'Decision Tree',
-                            'Gaussian']
+                            'Gaussian', 'SVM']
         self.model_path = model_path
         self.plot_path = plot_path
         self.report_path = report_path
-        self.acc_list = []
-        self.auc_list = []
-        self.confusion_matrix_list = []
+        # self.acc_list = []
+        # self.auc_list = []
+        self.accuracy_dic = {model:[] for model in self.model_names}
+        # self.confusion_matrix_list = []
 
-        self.n_classes = no_of_actions
-        self.target_names = ['Buy Put', 'Short/Buy stock', 'Sell Call', 'Flat', 'Sell Put', 'Buy stock', 'Buy Call']
+        self.n_classes = len(action_description)
+        self.target_names = action_description
+        self.actions = actions
         self.random_state = 123
+        self.rounding_precision = 2
+        self.include_volatility = include_volatility
 
         self.line_printer = LinePrinter()
 
@@ -95,10 +94,15 @@ class SupervisedClassifier:
         test_data_shuffled = test_data_shuffled.iloc[np.random.permutation(len(test_data_shuffled))]
 
         print("Generating test_train data")
-        X_train = train_data_shuffled[train_data_shuffled.columns[:-3]]
-        X_test = test_data_shuffled[test_data_shuffled.columns[:-3]]
+        columns_to_include = -3
+        if self.include_volatility:
+            columns_to_include = -2
+        X_train = train_data_shuffled[train_data_shuffled.columns[:-columns_to_include]]
+        X_test = test_data_shuffled[test_data_shuffled.columns[:-columns_to_include]]
         y_train = train_data_shuffled['action']
         y_test = test_data_shuffled['action']
+
+        # print(y_test)
 
         self.X_train, _, self.y_train, __ = train_test_split(X_train, y_train, test_size=0.01,
                                                              random_state=self.random_state)
@@ -106,6 +110,7 @@ class SupervisedClassifier:
                                                            random_state=self.random_state)
 
         self.y_onehot_test = self.generate_y_one_hot()
+        # print('len(Counter(self.y_test): ', len(Counter(self.y_test)))
         has_enough_data = (len(Counter(self.y_test)) == self.n_classes)
         return has_enough_data
 
@@ -131,6 +136,8 @@ class SupervisedClassifier:
         # self.model_pipeline.append(LogisticRegression(solver='newton-cg', penalty='l2'))
         # self.model_pipeline.append(LogisticRegression(solver='saga', penalty='elasticnet'))
         #
+        self.model_pipeline.append(SGDClassifier(loss='log_loss'))
+
         # self.model_pipeline.append(SVC())
 
         # self.model_pipeline.append(OneVsRestClassifier(LogisticRegression(max_iter=3000)))
@@ -161,25 +168,34 @@ class SupervisedClassifier:
 
             y_pred = model.predict(self.X_test)
             model_y_score = fitted_model.predict_proba(self.X_test)
-            report = classification_report(self.y_test, y_pred, target_names=self.target_names, output_dict=True)
-            # print("report: ", report)
-            # print("type(report): ", type(report))
+
+            # print('model_y_score: ', model_y_score)
+            report = classification_report(self.y_test.to_numpy(), y_pred,  output_dict=True, digits=self.rounding_precision)
+            # target_names = self.target_names,
+            report_accuracy = report['accuracy']
+            # print('report[accuracy]: ', round(report_accuracy, 2))
+            self.accuracy_dic[model_name].append(round(report_accuracy,self.rounding_precision))
+
+            # print('Generating Confusion Matrix')
+            # confusion = confusion_matrix(self.y_test.to_numpy(), y_pred, labels=self.actions)
+            # (pd.DataFrame(confusion)).to_csv(self.report_path + "/" + model_name + '_Run_' + str(global_run_counter)
+            #                                  + '_confusion_matrix.csv')
+
             print("Saving model results as: ", self.report_path + "/" + model_name + '_Run_' + str(global_run_counter)
-                                            + '_report.csv')
-            (pd.DataFrame(report).T).to_csv(self.report_path + "/" + model_name + '_Run_' + str(global_run_counter)
+                  + '_report.csv')
+            report_df = pd.DataFrame(report)
+            (round(report_df,self.rounding_precision).T).to_csv(self.report_path + "/" + model_name + '_Run_' + str(global_run_counter)
                                             + '_report.csv')
 
-            self.y_score.append(model_y_score)
-            print("Plotting model results for ", model_name + " Run " + str(global_run_counter))
-            self.plot_all_OvR_ROC(model_name + "_Run_" + str(global_run_counter), model_y_score)
+            # self.y_score.append(model_y_score)
 
-            # print(model_name, ' y_score[0]: ', model_y_score[0])
-            # print(model_name, ' len (y_score) : ', len(model_y_score))
-            # print(model_name, ' len (y_score[0]) : ', len(model_y_score[0]))
+            # print("Plotting model results for ", model_name + " Run " + str(global_run_counter))
+            # self.plot_all_OvR_ROC(model_name + "_Run_" + str(global_run_counter), model_y_score)
+
 
             self.line_printer.print_line()
 
-
+        pd.DataFrame(self.accuracy_dic).to_csv(self.report_path + '/Accuracy_Run_' + str(global_run_counter) + '.csv')
         global_run_counter += 1
         return self.y_score
 
@@ -193,8 +209,8 @@ class SupervisedClassifier:
             confusion_plot.set_xlabel('Predicted Values')
             confusion_plot.set_ylabel('Actual Values')
 
-    def accuracy_results(self):
-        return pd.DataFrame({'Model': self.model_list, ' Accuracy': self.acc_list, 'AUC': self.auc_list})
+    # def accuracy_results(self):
+    #     return pd.DataFrame({'Model': self.model_list, ' Accuracy': self.acc_list, 'AUC': self.auc_list})
 
     def calculate_ROC_value_using_micro_averaged_OvR(self):
         # store the fpr, tpr, and roc_auc for all averaging strategies

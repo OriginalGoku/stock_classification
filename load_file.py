@@ -35,6 +35,8 @@ class YahooDataLoader:
         then the data will skip 2 rows for each row it returns
         :return: Pandas DataFrame with ascending sorted pandas datetime index
         """
+        # To do change interval mechanism. First take the diff on index, then accept all date_dif that are greater than
+        ## interval. Then go through the date_diff which are less than interval and only select them based on interval
         if interval < 1:
             raise ValueError("interval must be greater than 0")
         if (path[-1] != '/'):
