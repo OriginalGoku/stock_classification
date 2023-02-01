@@ -16,6 +16,7 @@ class BatchDataLoader:
         :param batch_size: The actual batch size (number of rows of data to load)
         :param data_path: The main folder to load the data. All data must be in the sub folders from this data_path
         :param file_utility_input: dictionary containing default parameters of the file_utility class
+        track previously loaded data. Data might be repetitive. This option is good Optuna optimization
         :param intervals: the interval for data to be loaded. by default a 1 means to load all the data
         """
 
@@ -40,6 +41,7 @@ class BatchDataLoader:
         # batch size. data_to_return.iloc[:batch_size]. So the portion of data_to_return.iloc[batch_size:] will be
         # kept in this variable for the next call to fetch data
         self.data_left_from_previous_call = pd.DataFrame()
+        self.randomize_output = randomize_output
 
     def fetch_batch(self):
 
@@ -84,3 +86,31 @@ class BatchDataLoader:
         self.data_left_from_previous_call = None
 
         return data_to_return, True
+
+    def fetch_batch_randomized(self):
+
+        row_counter = 0
+        # load the data left over from the last function call
+        data_to_return = self.data_left_from_previous_call
+        folder_id_range = np.arange(0, len(self.list_of_folders))
+        # loop through the folder list starting from the last call to the functon
+        for idx in tqdm(range(0, len(self.list_of_folders))):
+
+            folder_counter = np.random.choice(len(self.list_of_folders),1)
+            folder_name = self.list_of_folders[folder_counter]
+
+            list_of_files = self.file_utility.load_file_names_in_directory(folder_name)
+            no_of_files_in_folder = len(list_of_files)
+
+            for file_counter in tqdm(range(self.file_counter, no_of_files_in_folder)):
+                loaded_data = self.data_loader.load_file(self.data_path + "/" + folder_name,
+                                                         list_of_files[file_counter],
+                                                         interval=self.intervals)
+                row_counter += len(loaded_data)
+                data_to_return = pd.concat([data_to_return, loaded_data])
+
+            # if enough data was collected, then return data
+            if row_counter >= self.batch_size:
+                return data_to_return.iloc[:self.batch_size]
+
+        return data_to_return
