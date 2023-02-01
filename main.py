@@ -68,7 +68,7 @@ if __name__ == '__main__':
     classifiers.generate_pipeline()
     data_loader = YahooDataLoader()
 
-    # Load all folders and iterate through each folder and perform trainining:
+    # Load all folders and iterate through each folder and perform training:
     list_of_folders = file_util.load_all_sub_directories()
     # print('list_of_folders[0]: ', list_of_folders[0])
     # print(shit)
@@ -104,7 +104,7 @@ if __name__ == '__main__':
 
                 # Generate Test Data
                 # first check if we have enough train data, then collect test data
-                if len(train_data) < threshold * train_percent:
+                if (len(train_data) < (threshold * train_percent)):
                     train_data = pd.concat([loaded_data, train_data])
                     # print('Train DATA::::::')
                     # print(train_data)
