@@ -26,11 +26,12 @@ from load_batch_data import BatchDataLoader
 
 class OptunaXGBoost:
     def __init__(self):
-        self.data_path = '../Drop_Box/Dropbox'
+        self.data_path = '..\Data_Source\Yahoo\Processed_Yahoo_Data\Stock_Binary_tolerance_half_std\ETF'
         self.sentence_length = 31
         self.batch_size = 1000
+        self.interval = 4
 
-        file_utility_input = ile_info = {'source_data_path': self.data_path,
+        self.file_utility_input = {'source_data_path': self.data_path,
                                          'save_destination_path': 'results',
                                          'file_formats_to_load': 'csv',
                                          'file_format_to_save': 'csv',
@@ -41,7 +42,7 @@ class OptunaXGBoost:
                                    'include_volatility': True,
                                    'data_path': self.data_path,
                                    'file_utility_input': self.file_utility_input,
-                                   'intervals': 4
+                                   'intervals': self.interval
                                    }
         self.batch_data_loader = BatchDataLoader(**batch_data_loader_input)
         self.data = None

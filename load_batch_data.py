@@ -41,7 +41,7 @@ class BatchDataLoader:
         # batch size. data_to_return.iloc[:batch_size]. So the portion of data_to_return.iloc[batch_size:] will be
         # kept in this variable for the next call to fetch data
         self.data_left_from_previous_call = pd.DataFrame()
-        self.randomize_output = randomize_output
+        # self.randomize_output = randomize_output
 
     def fetch_batch(self):
 

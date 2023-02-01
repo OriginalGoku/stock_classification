@@ -24,10 +24,13 @@ from load_file import YahooDataLoader
 from line_printer import LinePrinter
 from load_batch_data import BatchDataLoader
 
+
 def load_data():
-    data_path = '../Drop_Box/Dropbox'
+    # data_path = '../Drop_Box/Dropbox'
+    data_path = '..\Data_Source\Yahoo\Processed_Yahoo_Data\Stock_Binary_tolerance_half_std\ETF'
     sentence_length = 31
-    batch_size = 1000
+    batch_size = 100000
+    intervals = 4
 
     file_utility_input = ile_info = {'source_data_path': data_path,
                                      'save_destination_path': 'results',
@@ -40,17 +43,18 @@ def load_data():
                                'include_volatility': True,
                                'data_path': data_path,
                                'file_utility_input': file_utility_input,
-                               'intervals': 4
+                               'intervals': intervals
                                }
     batch_data_loader = BatchDataLoader(**batch_data_loader_input)
     data, done = batch_data_loader.fetch_batch()
     # data_zero_and_one = data[(data['action']==1) | (data['action']==0)]
     data_zero_and_one = data
-    data_zero_and_one.loc[data_zero_and_one['action'] ==-1,'action'] = 2
+    data_zero_and_one.loc[data_zero_and_one['action'] == -1, 'action'] = 2
     final_data = data_zero_and_one[data_zero_and_one.columns[:-2]]
     target = data_zero_and_one.action
 
     return final_data, target
+
 
 # FYI: Objective functions can take additional arguments
 # (https://optuna.readthedocs.io/en/stable/faq.html#objective-func-additional-args).
@@ -66,6 +70,7 @@ def objective(trial):
         # "objective": "binary:logistic",
         "objective": "multi:softmax",
         "num_class": 3,
+        #"eval_metric": "accuracy",
         "eval_metric": "auc",
         "booster": trial.suggest_categorical("booster", ["gbtree", "gblinear", "dart"]),
         "lambda": trial.suggest_float("lambda", 1e-8, 1.0, log=True),
