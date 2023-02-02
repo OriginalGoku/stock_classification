@@ -30,7 +30,7 @@ class OptunaXGBoost:
         #self.data_path = '../Drop_Box/Dropbox'
         self.data_path = '..\Data_Source\Yahoo\Processed_Yahoo_Data\Stock_Binary_tolerance_half_std\ETF'
         self.sentence_length = 31
-        self.batch_size = 30000
+        self.batch_size = 100000
         interval = 4
 
         self.file_utility_input = {'source_data_path': self.data_path,
@@ -117,7 +117,7 @@ class OptunaXGBoost:
         study = optuna.create_study(
             pruner=optuna.pruners.MedianPruner(n_warmup_steps=5), direction="maximize"
         )
-        study.optimize(self.objective, n_trials=100)
+        study.optimize(self.objective, n_trials=400)
         print(study.best_trial)
 
 
