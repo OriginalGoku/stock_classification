@@ -36,8 +36,8 @@ class OptunaOptimizer:
         #self.data_path = '../Drop_Box/Dropbox'
         self.rounding_precision = 4
         self.test_percent = 0.25
-        # self.data_path = '..\Data_Source\Yahoo\Processed_Yahoo_Data\Stock_Binary_tolerance_half_std\ETF'
-        self.data_path = '../Data_Source/Dropbox'
+        self.data_path = '..\Data_Source\Yahoo\Processed_Yahoo_Data\Stock_Binary_tolerance_half_std\ETF'
+        #self.data_path = '../Data_Source/Dropbox'
 
         self.sentence_length = 31
         self.batch_size = 100000
@@ -71,10 +71,10 @@ class OptunaOptimizer:
             #self.line_printer.print_text("We are HERE ")
             data = self.batch_data_loader.fetch_batch_randomized(self.load_positive_actions)
         else:
-            data, done = self.batch_data_loader.fetch_batch()
+            data, done = self.batch_data_loader.fetch_batch(self.load_positive_actions)
 
         data_zero_and_one = data
-        data_zero_and_one.loc[data_zero_and_one['action'] == -1, 'action'] = 2
+        #data_zero_and_one.loc[data_zero_and_one['action'] == -1, 'action'] = 2
         final_data = data_zero_and_one[data_zero_and_one.columns[:-2]]
         target = data_zero_and_one.action
         self.data = final_data
@@ -85,7 +85,7 @@ class OptunaOptimizer:
 
 
     def random_forest_objective(self, trial):
-        self.load_data(True)
+        #self.load_data(True)
         train_x, valid_x, train_y, valid_y = train_test_split(self.data, self.target, test_size=0.25)
         param = {
             #"verbosity": 0,
@@ -180,17 +180,16 @@ class OptunaOptimizer:
     #     model = RandomForestClassifier()
 
     def run_optuna(self, algorithm, n_trials):
-
-        study = optuna.create_study(
+        study = optuna.create_study()
+        #study = optuna.create_study(
             # pruner=optuna.pruners.MedianPruner(n_warmup_steps=5), direction="maximize"
-        )
-
+        #)
+        self.load_data(False)
         if (algorithm == 'gx_boosx_objective'):
             print("XGBoost_Objective")
             study.optimize(self.xg_boost_objective, n_trials=n_trials)
         if (algorithm == 'Random Forest'):
             print("Random Forest")
-            study = optuna.create_study()
             study.optimize(self.random_forest_objective, n_trials=n_trials, callbacks=[self.pruner])
 
 

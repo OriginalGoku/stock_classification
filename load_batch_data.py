@@ -43,7 +43,7 @@ class BatchDataLoader:
         self.data_left_from_previous_call = pd.DataFrame()
         # self.randomize_output = randomize_output
 
-    def fetch_batch(self):
+    def fetch_batch(self, load_positive_actions):
 
         """
 
@@ -63,9 +63,10 @@ class BatchDataLoader:
             no_of_files_in_folder = len(list_of_files)
 
             for file_counter in tqdm(range(self.file_counter, no_of_files_in_folder)):
-
-                loaded_data = self.data_loader.load_file(self.data_path + "/" + folder_name, list_of_files[file_counter],
-                                                        interval=self.intervals)
+                loaded_data = self.data_loader.load_file(self.data_path + "/" + folder_name,
+                                                         list_of_files[file_counter],
+                                                         load_positive_actions=load_positive_actions,
+                                                         interval=self.intervals)
                 row_counter += len(loaded_data)
                 data_to_return = pd.concat([data_to_return, loaded_data])
 
@@ -73,7 +74,7 @@ class BatchDataLoader:
                 # if the file counter has not reached the end of the files in a folder, then increase self.file_counter
                 # so it can load the correct file in thee next call, else reset the self.file_counter to zero, if not
                 if file_counter < no_of_files_in_folder:
-                    self.file_counter = file_counter+1
+                    self.file_counter = file_counter + 1
                 else:
                     self.file_counter = 0
                 self.folder_counter = folder_counter
@@ -95,6 +96,7 @@ class BatchDataLoader:
         data_to_return = self.data_left_from_previous_call
         folder_id_range = np.arange(0, len(self.list_of_folders))
         # loop through the folder list starting from the last call to the functon
+        print("Total Row loaded so far: ", row_counter)
         for idx in tqdm(range(0, len(self.list_of_folders))):
 
             folder_counter = np.random.choice(len(self.list_of_folders), 1)
@@ -106,7 +108,7 @@ class BatchDataLoader:
             for file_counter in tqdm(range(self.file_counter, no_of_files_in_folder)):
                 loaded_data = self.data_loader.load_file(self.data_path + "/" + folder_name,
                                                          list_of_files[file_counter],
-                                                         load_positive_actions = load_positive_actions,
+                                                         load_positive_actions=load_positive_actions,
                                                          interval=self.intervals)
                 row_counter += len(loaded_data)
                 data_to_return = pd.concat([data_to_return, loaded_data])

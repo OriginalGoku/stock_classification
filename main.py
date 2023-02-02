@@ -34,7 +34,7 @@ if __name__ == '__main__':
 
     print("Start time :", starting_time)
 
-    data_path = '../Data_Source/Yahoo/Processed_Yahoo_Data/Stock_Binary_tolerance_half_std/ETFs'
+    data_path = '../Data_Source/Yahoo/Processed_Yahoo_Data/Stock_Binary_tolerance_half_std/ETF'
     # folder_path = 'AMS'
     # This parameter is used in order to prevent memory problems. If a folder contains more than 1000 files,
     # then the system will load 1000 files first, do the training and then continue with the rest of the files
