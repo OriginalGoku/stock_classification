@@ -17,6 +17,9 @@ from sklearn.neural_network import MLPClassifier
 from sklearn.metrics import classification_report
 from sklearn.linear_model import SGDClassifier
 
+import xgboost as xgb
+
+
 # To save and load models
 from joblib import dump, load
 
@@ -65,7 +68,12 @@ class SupervisedClassifier:
         self.y_onehot_test = None
 
         self.model_names = ['MLP', 'Gradient Boosting', 'Logistic Regression', 'KNN', 'Random Forest', 'Decision Tree',
-                            'Gaussian', 'SVM']
+                            'Gaussian', 'SVM','XGBoost']
+        # self.model_names = ['XGBoost']
+        self.xgb_params = {'booster': 'gbtree', 'lambda': 3.12800432790444e-08, 'alpha': 1.9119332110454214e-06,
+                           'max_depth': 7,
+                           'eta': 0.39440064197237373, 'gamma': 0.11824872282374695, 'grow_policy': 'depthwise'}
+
         self.model_path = model_path
         self.plot_path = plot_path
         self.report_path = report_path
@@ -97,8 +105,8 @@ class SupervisedClassifier:
         columns_to_include = -3
         if self.include_volatility:
             columns_to_include = -2
-        X_train = train_data_shuffled[train_data_shuffled.columns[:-columns_to_include]]
-        X_test = test_data_shuffled[test_data_shuffled.columns[:-columns_to_include]]
+        X_train = train_data_shuffled[train_data_shuffled.columns[:columns_to_include]]
+        X_test = test_data_shuffled[test_data_shuffled.columns[:columns_to_include]]
         y_train = train_data_shuffled['action']
         y_test = test_data_shuffled['action']
 
@@ -125,22 +133,16 @@ class SupervisedClassifier:
         self.model_pipeline.append(GradientBoostingClassifier())
         self.model_pipeline.append(LogisticRegression(max_iter=2000))
         self.model_pipeline.append(KNeighborsClassifier())
-        # self.model_pipeline.append(KNeighborsClassifier(n_neighbors=10))
         self.model_pipeline.append(RandomForestClassifier())
-        # self.model_pipeline.append(RandomForestClassifier(max_features=63))
-
         self.model_pipeline.append(DecisionTreeClassifier())
         self.model_pipeline.append(GaussianNB())
-
-        # solver='liblinear'
-        # self.model_pipeline.append(LogisticRegression(solver='newton-cg', penalty='l2'))
-        # self.model_pipeline.append(LogisticRegression(solver='saga', penalty='elasticnet'))
-        #
         self.model_pipeline.append(SGDClassifier(loss='log_loss'))
 
-        # self.model_pipeline.append(SVC())
 
-        # self.model_pipeline.append(OneVsRestClassifier(LogisticRegression(max_iter=3000)))
+        # self.model_pipeline.append(xgb.Booster(**params))
+
+        self.model_pipeline.append(xgb.XGBClassifier(**self.xgb_params))
+
 
     def evaluate_model(self):
 

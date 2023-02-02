@@ -1,4 +1,5 @@
 import pandas as pd
+from line_printer import LinePrinter
 
 
 class YahooDataLoader:
@@ -19,29 +20,32 @@ class YahooDataLoader:
         self.column_names = column_name_dictionary
         self.date_index_new_name = date_index_new_name
         self.verbose = verbose
+        self.line_printer = LinePrinter()
 
     def rename_columns(self, original_data):
         original_data.index.rename(self.date_index_new_name, inplace=True)
         original_data.rename(columns=self.column_names, inplace=True)
 
-    def load_file(self, path, file_name, interval = 1):
+    def load_file(self, path, file_name, load_positive_actions, interval=1):
         """
 
         :param path: path must include '/'
         :param file_name:
-        :param column_names: [open, high, low, close, volume]
-        :param data_has_volume: clarify if data has volume information
+        :param load_positive_actions: if set to true, then -1 will be loaded as 2
         :param interval: It will return data in intervals set by this parameters. so for example if this is set to 2
         then the data will skip 2 rows for each row it returns
         :return: Pandas DataFrame with ascending sorted pandas datetime index
         """
         # To do change interval mechanism. First take the diff on index, then accept all date_dif that are greater than
         ## interval. Then go through the date_diff which are less than interval and only select them based on interval
+
+        # toodo: need to make this function dynamic so it changes any negative number to a positive number
+
         if interval < 1:
             raise ValueError("interval must be greater than 0")
         if (path[-1] != '/'):
             # raise Warning('Path must end with /')
-            path = path+'/'
+            path = path + '/'
 
         file_format = file_name.split('.')[-1]
         try:
@@ -63,6 +67,8 @@ class YahooDataLoader:
             data['action'] = data['action'].astype(int)
 
             data = data.iloc[::interval, :]
+            if load_positive_actions:
+                data.loc[data['action'] == -1, 'action'] = 2
             return data
         except:
             print('Could not load ', path, file_name)

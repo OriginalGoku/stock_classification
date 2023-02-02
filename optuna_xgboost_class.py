@@ -118,7 +118,15 @@ class OptunaXGBoost:
             pruner=optuna.pruners.MedianPruner(n_warmup_steps=5), direction="maximize"
         )
         study.optimize(self.objective, n_trials=400)
-        print(study.best_trial)
+
+        print("Number of finished trials: ", len(study.trials))
+        print("Best trial:")
+        trial = study.best_trial
+
+        print("  Value: {}".format(trial.value))
+        print("  Params: ")
+        for key, value in trial.params.items():
+            print("    {}: {}".format(key, value))
 
 
 # if __name__ == "__main__":
@@ -127,3 +135,4 @@ if __name__ == "__main__":
     optuna_optimizer = OptunaXGBoost()
     # optuna_optimizer.load_data()
     optuna_optimizer.run_optuna()
+

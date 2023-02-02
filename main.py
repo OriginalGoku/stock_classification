@@ -42,7 +42,8 @@ if __name__ == '__main__':
     line_printer = LinePrinter()
     # no_of_files_to_start_training = 1000
     min_df_size_to_start_training = 100000
-    actions = [-1, 0, 1]
+    # actions = [-1, 0, 1]
+    actions = [2, 0, 1]
 
     batch_size_to_load_if_min_df_size_does_not_have_enough_sample_data = 5000
     # action_description = ['Long Put', 'Short stock', 'Short Call', 'Flat', 'Short Put', 'Long stock', 'Long Call']
@@ -92,41 +93,44 @@ if __name__ == '__main__':
         for file_counter in tqdm(range(no_of_files_in_folder)):
             # for file_counter in tqdm(range(20)):
             #     print('Loading: ' + data_path + "/" + folder_name, list_of_files[file_counter])
-            loaded_data = data_loader.load_file(data_path + "/" + folder_name, list_of_files[file_counter],
+            loaded_data = data_loader.load_file(data_path + "/" + folder_name, list_of_files[file_counter], True,
                                                 interval=intervals)
-            total_row_counter += len(loaded_data)
 
-            # if there is information available in the file we have just loaded then proceed
+            # try:
+                # if there is information available in the file we have just loaded then proceed
             if len(loaded_data) > 0:
-                # threshold is the minimum number of rows of data required before entering starting the classifier
+                total_row_counter += len(loaded_data)
+                    # threshold is the minimum number of rows of data required before entering starting the classifier
                 threshold = (min_df_size_to_start_training + extra_classification_counter *
-                             batch_size_to_load_if_min_df_size_does_not_have_enough_sample_data)
+                                 batch_size_to_load_if_min_df_size_does_not_have_enough_sample_data)
 
-                # Generate Test Data
-                # first check if we have enough train data, then collect test data
+                    # Generate Test Data
+                    # first check if we have enough train data, then collect test data
                 if (len(train_data) < (threshold * train_percent)):
                     train_data = pd.concat([loaded_data, train_data])
-                    # print('Train DATA::::::')
-                    # print(train_data)
-                    # line_printer.print_line()
+                        # print('Train DATA::::::')
+                        # print(train_data)
+                        # line_printer.print_line()
                 else:
-                    # Generate Train Data
+                        # Generate Train Data
                     test_data = pd.concat([loaded_data, test_data])
 
-                # if we have enough data, then we can run the classifier.
+                    # if we have enough data, then we can run the classifier.
 
                 if ((len(test_data) + len(train_data)) > threshold):
                     extra_classification_counter = run_classifier(classifiers, train_data, test_data,
-                                                                  extra_classification_counter)
-                    # this is to free up memory. If the run_classifier manged to conduct training then we can start
-                    # collecting data for a new train and test dataset
+                                                                      extra_classification_counter)
+                        # this is to free up memory. If the run_classifier manged to conduct training then we can start
+                        # collecting data for a new train and test dataset
                     if (extra_classification_counter == 0):
                         train_data = pd.DataFrame()
                         test_data = pd.DataFrame()
 
-                print("Total Row Counter: ", total_row_counter)
-                print('len (train_data): ', len(train_data))
-                print('len (test_data): ', len(test_data))
+                    print("Total Row Counter: ", total_row_counter)
+                    print('len (train_data): ', len(train_data))
+                    print('len (test_data): ', len(test_data))
+            # except:
+            #     print("could not load this file: ", data_path + "/" + folder_name, list_of_files[file_counter])
 
     print('Before Final Run len (train_data): ', len(train_data))
     print('Before Final Run len (test_data): ', len(test_data))
