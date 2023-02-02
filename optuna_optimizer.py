@@ -18,6 +18,9 @@ import sklearn.metrics
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
 import xgboost as xgb
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import classification_report
+
 from tqdm import tqdm
 from file_utility import FileUtility
 from load_file import YahooDataLoader
@@ -25,13 +28,24 @@ from line_printer import LinePrinter
 from load_batch_data import BatchDataLoader
 from line_printer import LinePrinter
 
-class OptunaXGBoost:
+from optuna_pruning_sklearn import StopWhenTrialKeepBeingPrunedCallback
+
+
+class OptunaOptimizer:
     def __init__(self):
         #self.data_path = '../Drop_Box/Dropbox'
-        self.data_path = '..\Data_Source\Yahoo\Processed_Yahoo_Data\Stock_Binary_tolerance_half_std\ETF'
+        self.rounding_precision = 4
+        self.test_percent = 0.25
+        # self.data_path = '..\Data_Source\Yahoo\Processed_Yahoo_Data\Stock_Binary_tolerance_half_std\ETF'
+        self.data_path = '../Data_Source/Dropbox'
+
         self.sentence_length = 31
         self.batch_size = 100000
         interval = 4
+        self.pruning_threshold = 5
+        self.load_positive_actions = True
+
+        self.pruner = StopWhenTrialKeepBeingPrunedCallback(self.pruning_threshold)
 
         self.file_utility_input = {'source_data_path': self.data_path,
                                    'save_destination_path': 'results',
@@ -55,7 +69,7 @@ class OptunaXGBoost:
 
         if fetch_randomize_data:
             #self.line_printer.print_text("We are HERE ")
-            data = self.batch_data_loader.fetch_batch_randomized()
+            data = self.batch_data_loader.fetch_batch_randomized(self.load_positive_actions)
         else:
             data, done = self.batch_data_loader.fetch_batch()
 
@@ -69,14 +83,49 @@ class OptunaXGBoost:
 
         # return final_data, target
 
+
+    def random_forest_objective(self, trial):
+        self.load_data(True)
+        train_x, valid_x, train_y, valid_y = train_test_split(self.data, self.target, test_size=0.25)
+        param = {
+            #"verbosity": 0,
+            "n_estimators": trial.suggest_int("n_estimators", 100, 150, log=True),
+            "criterion": trial.suggest_categorical("criterion", ["gini", "entropy", "log_loss"]),
+            "max_depth": trial.suggest_int("max_depth", 5, 10, log=True),
+            "min_samples_split": trial.suggest_int("min_samples_split", 10, 20, log=True),
+            "min_samples_leaf": trial.suggest_int("min_samples_leaf", 1, 5, log=True),
+            "bootstrap": trial.suggest_categorical("bootstrap", [True, False]),
+            "ccp_alpha": trial.suggest_float("ccp_alpha", 0.01, 1, log=True),
+            #"eval_metric": "auc",
+        }
+        if param["bootstrap"]:
+            param["max_samples"] = trial.suggest_float("max_samples", 0.01, 0.99, log=True)
+
+        model = RandomForestClassifier(**param)
+
+        model.fit(train_x, train_y)
+        # print("Saving model ", model_name)
+        # dump(fitted_model, model_file_name)
+
+        y_pred = model.predict(valid_x)
+        # model_y_score = fitted_model.predict_proba(valid_x)
+
+        # print('model_y_score: ', model_y_score)
+        report = classification_report(valid_y.to_numpy(), y_pred, output_dict=True, digits=self.rounding_precision)
+        # target_names = self.target_names,
+        report_accuracy = report['accuracy']
+
+        return report_accuracy
+
+
     # FYI: Objective functions can take additional arguments
     # (https://optuna.readthedocs.io/en/stable/faq.html#objective-func-additional-args).
-    def objective(self, trial):
+    def xg_boost_objective(self, trial):
         # data, target = sklearn.datasets.load_breast_cancer(return_X_y=True)
         # data, target = load_data()
         # print(self.data)
         self.load_data(True)
-        train_x, valid_x, train_y, valid_y = train_test_split(self.data, self.target, test_size=0.25)
+        train_x, valid_x, train_y, valid_y = train_test_split(self.data, self.target, test_size=self.test_percent)
         dtrain = xgb.DMatrix(train_x, label=train_y)
         dvalid = xgb.DMatrix(valid_x, label=valid_y)
 
@@ -112,12 +161,38 @@ class OptunaXGBoost:
         accuracy = accuracy_score(valid_y, pred_labels)
         return accuracy
 
-    def run_optuna(self):
+    # def random_forest_objective(self, trial):
+    #
+    #     self.load_data(True)
+    #     train_x, valid_x, train_y, valid_y = train_test_split(self.data, self.target, test_size=0.25)
+    #
+    #     param = {
+    #         "verbosity": 0,
+    #         # "objective": "binary:logistic",
+    #         "objective": "multi:softmax",
+    #         "num_class": 3,
+    #         "eval_metric": "auc",
+    #         "booster": trial.suggest_categorical("booster", ["gbtree", "gblinear", "dart"]),
+    #         "lambda": trial.suggest_float("lambda", 1e-8, 1.0, log=True),
+    #         "alpha": trial.suggest_float("alpha", 1e-8, 1.0, log=True),
+    #     }
+    #
+    #     model = RandomForestClassifier()
+
+    def run_optuna(self, algorithm, n_trials):
 
         study = optuna.create_study(
-            pruner=optuna.pruners.MedianPruner(n_warmup_steps=5), direction="maximize"
+            # pruner=optuna.pruners.MedianPruner(n_warmup_steps=5), direction="maximize"
         )
-        study.optimize(self.objective, n_trials=400)
+
+        if (algorithm == 'gx_boosx_objective'):
+            print("XGBoost_Objective")
+            study.optimize(self.xg_boost_objective, n_trials=n_trials)
+        if (algorithm == 'Random Forest'):
+            print("Random Forest")
+            study = optuna.create_study()
+            study.optimize(self.random_forest_objective, n_trials=n_trials, callbacks=[self.pruner])
+
 
         print("Number of finished trials: ", len(study.trials))
         print("Best trial:")
@@ -132,7 +207,7 @@ class OptunaXGBoost:
 # if __name__ == "__main__":
 if __name__ == "__main__":
     # data_path = '../Data_Source/Yahoo/Processed_Yahoo_Data/Stock_Binary_tolerance_half_std/ETFs'
-    optuna_optimizer = OptunaXGBoost()
+    optuna_optimizer = OptunaOptimizer()
     # optuna_optimizer.load_data()
-    optuna_optimizer.run_optuna()
+    optuna_optimizer.run_optuna("Random Forest", n_trials=100)
 
