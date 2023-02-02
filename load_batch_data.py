@@ -54,6 +54,7 @@ class BatchDataLoader:
         row_counter = 0
         # load the data left over from the last function call
         data_to_return = self.data_left_from_previous_call
+        print("List of folder: ", self.list_of_folders)
         # loop through the folder list starting from the last call to the functon
         for folder_counter in tqdm(range(self.folder_counter, len(self.list_of_folders))):
             folder_name = self.list_of_folders[folder_counter]
@@ -97,7 +98,7 @@ class BatchDataLoader:
         for idx in tqdm(range(0, len(self.list_of_folders))):
 
             folder_counter = np.random.choice(len(self.list_of_folders),1)
-            folder_name = self.list_of_folders[folder_counter]
+            folder_name = self.list_of_folders[folder_counter[0]]
 
             list_of_files = self.file_utility.load_file_names_in_directory(folder_name)
             no_of_files_in_folder = len(list_of_files)

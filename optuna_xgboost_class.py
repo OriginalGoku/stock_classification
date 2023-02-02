@@ -24,40 +24,45 @@ from load_file import YahooDataLoader
 from line_printer import LinePrinter
 from load_batch_data import BatchDataLoader
 
+
 class OptunaXGBoost:
     def __init__(self):
-        self.data_path = '..\Data_Source\Yahoo\Processed_Yahoo_Data\Stock_Binary_tolerance_half_std\ETF'
+        self.data_path = '../Drop_Box/Dropbox'
         self.sentence_length = 31
         self.batch_size = 1000
-        self.interval = 4
+        interval = 4
 
         self.file_utility_input = {'source_data_path': self.data_path,
-                                         'save_destination_path': 'results',
-                                         'file_formats_to_load': 'csv',
-                                         'file_format_to_save': 'csv',
-                                         'verbose': True
-                                         }
+                                   'save_destination_path': 'results',
+                                   'file_formats_to_load': 'csv',
+                                   'file_format_to_save': 'csv',
+                                   'verbose': True
+                                   }
         batch_data_loader_input = {'batch_size': self.batch_size,
                                    'sentence_length': self.sentence_length,
                                    'include_volatility': True,
                                    'data_path': self.data_path,
                                    'file_utility_input': self.file_utility_input,
-                                   'intervals': self.interval
+                                   'intervals': interval
                                    }
         self.batch_data_loader = BatchDataLoader(**batch_data_loader_input)
         self.data = None
         self.target = None
 
-    def load_data(self):
+    def load_data(self, fetch_randomize_data):
 
-        data, done = self.batch_data_loader.fetch_batch()
-        # data_zero_and_one = data[(data['action']==1) | (data['action']==0)]
+        if fetch_randomize_data:
+            data = self.batch_data_loader.fetch_batch_randomized()
+        else:
+            data, done = self.batch_data_loader.fetch_batch()
+
         data_zero_and_one = data
-        data_zero_and_one.loc[data_zero_and_one['action'] ==-1,'action'] = 2
+        data_zero_and_one.loc[data_zero_and_one['action'] == -1, 'action'] = 2
         final_data = data_zero_and_one[data_zero_and_one.columns[:-2]]
         target = data_zero_and_one.action
         self.data = final_data
         self.target = target
+
 
         # return final_data, target
 
@@ -66,6 +71,8 @@ class OptunaXGBoost:
     def objective(self, trial):
         # data, target = sklearn.datasets.load_breast_cancer(return_X_y=True)
         # data, target = load_data()
+        # print(self.data)
+        self.load_data(True)
         train_x, valid_x, train_y, valid_y = train_test_split(self.data, self.target, test_size=0.25)
         dtrain = xgb.DMatrix(train_x, label=train_y)
         dvalid = xgb.DMatrix(valid_x, label=valid_y)
@@ -109,9 +116,10 @@ class OptunaXGBoost:
         study.optimize(self.objective, n_trials=100)
         print(study.best_trial)
 
+
 # if __name__ == "__main__":
 if __name__ == "__main__":
     # data_path = '../Data_Source/Yahoo/Processed_Yahoo_Data/Stock_Binary_tolerance_half_std/ETFs'
     optuna_optimizer = OptunaXGBoost()
+    # optuna_optimizer.load_data()
     optuna_optimizer.run_optuna()
-
