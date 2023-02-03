@@ -19,7 +19,6 @@ from sklearn.linear_model import SGDClassifier
 
 import xgboost as xgb
 
-
 # To save and load models
 from joblib import dump, load
 
@@ -46,7 +45,8 @@ def check_and_create_folder(path_):
 # Testing Git updates
 
 class SupervisedClassifier:
-    def __init__(self, actions: [int], action_description: [str], include_volatility: bool, model_path='models', plot_path='plots', report_path='reports'):
+    def __init__(self, actions: [int], action_description: [str], include_volatility: bool, model_path='models',
+                 plot_path='plots', report_path='reports'):
         """
         Sequence in this class:
         1. call generate_test_train
@@ -67,9 +67,9 @@ class SupervisedClassifier:
         self.y_score = []
         self.y_onehot_test = None
 
-        self.model_names = ['MLP', 'Gradient Boosting', 'Logistic Regression', 'KNN', 'Random Forest', 'Decision Tree',
-                            'Gaussian', 'SVM','XGBoost']
-        # self.model_names = ['XGBoost']
+        # self.model_names = ['MLP', 'Gradient Boosting', 'Logistic Regression', 'KNN', 'Random Forest', 'Decision Tree',
+        #                     'Gaussian', 'SVM','XGBoost']
+        self.model_names = ['Random Forest']
         self.xgb_params = {'booster': 'gbtree', 'lambda': 3.12800432790444e-08, 'alpha': 1.9119332110454214e-06,
                            'max_depth': 7,
                            'eta': 0.39440064197237373, 'gamma': 0.11824872282374695, 'grow_policy': 'depthwise'}
@@ -79,7 +79,7 @@ class SupervisedClassifier:
         self.report_path = report_path
         # self.acc_list = []
         # self.auc_list = []
-        self.accuracy_dic = {model:[] for model in self.model_names}
+        self.accuracy_dic = {model: [] for model in self.model_names}
         # self.confusion_matrix_list = []
 
         self.n_classes = len(action_description)
@@ -129,20 +129,19 @@ class SupervisedClassifier:
 
     def generate_pipeline(self):
 
-        self.model_pipeline.append(MLPClassifier(early_stopping=False))
-        self.model_pipeline.append(GradientBoostingClassifier())
-        self.model_pipeline.append(LogisticRegression(max_iter=2000))
-        self.model_pipeline.append(KNeighborsClassifier())
-        self.model_pipeline.append(RandomForestClassifier())
-        self.model_pipeline.append(DecisionTreeClassifier())
-        self.model_pipeline.append(GaussianNB())
-        self.model_pipeline.append(SGDClassifier(loss='log_loss'))
-
+        # self.model_pipeline.append(MLPClassifier(early_stopping=False))
+        # self.model_pipeline.append(GradientBoostingClassifier())
+        # self.model_pipeline.append(LogisticRegression(max_iter=2000))
+        # self.model_pipeline.append(KNeighborsClassifier())
+        self.model_pipeline.append(RandomForestClassifier(n_estimators=183, criterion='log_loss', max_depth=28,
+                                                          bootstrap=True))
+        # self.model_pipeline.append(DecisionTreeClassifier())
+        # self.model_pipeline.append(GaussianNB())
+        # self.model_pipeline.append(SGDClassifier(loss='log_loss'))
 
         # self.model_pipeline.append(xgb.Booster(**params))
 
-        self.model_pipeline.append(xgb.XGBClassifier(**self.xgb_params))
-
+        # self.model_pipeline.append(xgb.XGBClassifier(**self.xgb_params))
 
     def evaluate_model(self):
 
@@ -172,11 +171,12 @@ class SupervisedClassifier:
             model_y_score = fitted_model.predict_proba(self.X_test)
 
             # print('model_y_score: ', model_y_score)
-            report = classification_report(self.y_test.to_numpy(), y_pred,  output_dict=True, digits=self.rounding_precision)
+            report = classification_report(self.y_test.to_numpy(), y_pred, output_dict=True,
+                                           digits=self.rounding_precision)
             # target_names = self.target_names,
             report_accuracy = report['accuracy']
             # print('report[accuracy]: ', round(report_accuracy, 2))
-            self.accuracy_dic[model_name].append(round(report_accuracy,self.rounding_precision))
+            self.accuracy_dic[model_name].append(round(report_accuracy, self.rounding_precision))
 
             # print('Generating Confusion Matrix')
             # confusion = confusion_matrix(self.y_test.to_numpy(), y_pred, labels=self.actions)
@@ -186,14 +186,14 @@ class SupervisedClassifier:
             print("Saving model results as: ", self.report_path + "/" + model_name + '_Run_' + str(global_run_counter)
                   + '_report.csv')
             report_df = pd.DataFrame(report)
-            (round(report_df,self.rounding_precision).T).to_csv(self.report_path + "/" + model_name + '_Run_' + str(global_run_counter)
-                                            + '_report.csv')
+            (round(report_df, self.rounding_precision).T).to_csv(
+                self.report_path + "/" + model_name + '_Run_' + str(global_run_counter)
+                + '_report.csv')
 
             # self.y_score.append(model_y_score)
 
             # print("Plotting model results for ", model_name + " Run " + str(global_run_counter))
             # self.plot_all_OvR_ROC(model_name + "_Run_" + str(global_run_counter), model_y_score)
-
 
             self.line_printer.print_line()
 

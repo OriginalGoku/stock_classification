@@ -41,7 +41,7 @@ if __name__ == '__main__':
 
     line_printer = LinePrinter()
     # no_of_files_to_start_training = 1000
-    min_df_size_to_start_training = 100000
+    min_df_size_to_start_training = 3000
     # actions = [-1, 0, 1]
     actions = [2, 0, 1]
 
@@ -84,7 +84,7 @@ if __name__ == '__main__':
     total_row_counter = 0
 
     for folder_counter in tqdm(range(len(list_of_folders))):
-    # for folder_counter in tqdm(range(1)):
+    # for folder_counter in tqdm(range(1,2)):
         folder_name = list_of_folders[folder_counter]
         # folder_name = list_of_folders[4]
 
