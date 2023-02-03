@@ -12,6 +12,7 @@ You can run this example as follows:
 
 import numpy as np
 import optuna
+import pandas as pd
 
 import sklearn.datasets
 import sklearn.metrics
@@ -36,11 +37,11 @@ class OptunaOptimizer:
         #self.data_path = '../Drop_Box/Dropbox'
         self.rounding_precision = 4
         self.test_percent = 0.25
-        self.data_path = '..\Data_Source\Yahoo\Processed_Yahoo_Data\Stock_Binary_tolerance_half_std\ETF'
-        #self.data_path = '../Data_Source/Dropbox'
+        #self.data_path = '..\Data_Source\Yahoo\Processed_Yahoo_Data\Stock_Binary_tolerance_half_std\ETF'
+        self.data_path = '../Data_Source/Dropbox'
 
         self.sentence_length = 31
-        self.batch_size = 100000
+        self.batch_size = 1000
         interval = 4
         self.pruning_threshold = 5
         self.load_positive_actions = True
@@ -80,6 +81,8 @@ class OptunaOptimizer:
         self.data = final_data
         self.target = target
 
+        print(self.target.groupby(self.target).size())
+
 
         # return final_data, target
 
@@ -107,7 +110,21 @@ class OptunaOptimizer:
         # print("Saving model ", model_name)
         # dump(fitted_model, model_file_name)
 
+        y_pred = pd.DataFrame(model.predict(valid_x))
+        print("y_pred:")
+        print(y_pred.columns)
+        print("len: ", len(y_pred))
+        print(type(y_pred))
+        print(y_pred[y_pred[0] == 2])
+        print(y_pred.groupby(y_pred[0]).size())
+        print("=====")
+        print("y_valid:")
+        print(valid_y.groupby(valid_y).size())
+        print("len: ", len(valid_y))
+
         y_pred = model.predict(valid_x)
+
+
         # model_y_score = fitted_model.predict_proba(valid_x)
 
         # print('model_y_score: ', model_y_score)
