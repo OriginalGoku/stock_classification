@@ -143,6 +143,44 @@ class SupervisedClassifier:
         # self.model_pipeline.append(xgb.Booster(**params))
 
         # self.model_pipeline.append(xgb.XGBClassifier(**self.xgb_params))
+    def load_random_forest_and_evaluate(self):
+        global global_run_counter
+        self.line_printer.print_text("Loading Random Forest Model")
+        model_name = 'Random Forest_Optimized'
+        model = load('models/best_random_forest_model.joblib')
+        y_pred = model.predict(self.X_test)
+        # model_y_score = fitted_model.predict_proba(self.X_test)
+
+        # print('model_y_score: ', model_y_score)
+        report = classification_report(self.y_test.to_numpy(), y_pred, output_dict=True,
+                                       digits=self.rounding_precision)
+        # target_names = self.target_names,
+        report_accuracy = report['accuracy']
+        # print('report[accuracy]: ', round(report_accuracy, 2))
+        # self.accuracy_dic[model_name].append(round(report_accuracy, self.rounding_precision))
+
+        # print('Generating Confusion Matrix')
+        confusion = confusion_matrix(self.y_test.to_numpy(), y_pred, labels=self.actions)
+        (pd.DataFrame(confusion)).to_csv(self.report_path + "/" + model_name + '_Run_' + str(global_run_counter)
+                                         + '_confusion_matrix.csv')
+
+        print("Saving model results as: ", self.report_path + "/" + model_name + '_Run_' + str(global_run_counter)
+              + '_report.csv')
+        report_df = pd.DataFrame(report)
+        (round(report_df, self.rounding_precision).T).to_csv(
+            self.report_path + "/" + model_name + '_Run_' + str(global_run_counter)
+            + '_report.csv')
+
+        # self.y_score.append(model_y_score)
+
+        # print("Plotting model results for ", model_name + " Run " + str(global_run_counter))
+        # self.plot_all_OvR_ROC(model_name + "_Run_" + str(global_run_counter), model_y_score)
+
+        self.line_printer.print_line()
+
+        pd.DataFrame(self.accuracy_dic).to_csv(self.report_path + '/Accuracy_Run_' + str(global_run_counter) + '.csv')
+        global_run_counter += 1
+        return self.y_score
 
     def evaluate_model(self):
 
@@ -164,9 +202,9 @@ class SupervisedClassifier:
                 print('Loading model: ', model_name)
                 model = load(model_file_name)
 
-            #fitted_model = model.fit(self.X_train, self.y_train)
+            fitted_model = model.fit(self.X_train, self.y_train)
             print("Saving model ", model_name)
-            #dump(fitted_model, model_file_name)
+            dump(fitted_model, model_file_name)
 
             y_pred = model.predict(self.X_test)
             #model_y_score = fitted_model.predict_proba(self.X_test)

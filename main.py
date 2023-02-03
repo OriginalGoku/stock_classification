@@ -20,7 +20,8 @@ import timeit
 
 def run_classifier(classifiers, train_data, test_data, extra_classification_counter):
     if classifiers.generate_test_train(train_data, test_data):
-        y_scores = classifiers.evaluate_model()
+        # y_scores = classifiers.evaluate_model()
+        y_scores = classifiers.load_random_forest_and_evaluate()
         extra_classification_counter = 0
 
     else:
@@ -51,7 +52,7 @@ if __name__ == '__main__':
     intervals = 4
     sentence_length = 32
     include_volatility = True
-    train_percent = 0.01
+    train_percent = 0.5
 
     file_info = {'source_data_path': data_path,
                  'save_destination_path': 'results',
@@ -101,9 +102,11 @@ if __name__ == '__main__':
             if len(loaded_data) > 0:
                 total_row_counter += len(loaded_data)
                     # threshold is the minimum number of rows of data required before entering starting the classifier
-                threshold = (min_df_size_to_start_training + extra_classification_counter *
-                                 batch_size_to_load_if_min_df_size_does_not_have_enough_sample_data)
+                threshold = (min_df_size_to_start_training + (extra_classification_counter *
+                                 batch_size_to_load_if_min_df_size_does_not_have_enough_sample_data))
 
+
+                #print('threshold: ', threshold)
                     # Generate Test Data
                     # first check if we have enough train data, then collect test data
                 if (len(train_data) < (threshold * train_percent)):
@@ -118,6 +121,7 @@ if __name__ == '__main__':
                     # if we have enough data, then we can run the classifier.
 
                 if ((len(test_data) + len(train_data)) > threshold):
+                    #line_printer.print_text('Calling the Classifier')
                     extra_classification_counter = run_classifier(classifiers, train_data, test_data,
                                                                       extra_classification_counter)
                         # this is to free up memory. If the run_classifier manged to conduct training then we can start
