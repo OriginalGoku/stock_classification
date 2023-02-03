@@ -30,6 +30,7 @@ from line_printer import LinePrinter
 
 from optuna_pruning_sklearn import StopWhenTrialKeepBeingPrunedCallback
 from sklearn.multiclass import OneVsRestClassifier
+import matplotlib.pyplot as plt
 
 
 
@@ -38,12 +39,12 @@ class OptunaOptimizer:
 
         self.rounding_precision = 4
         self.test_percent = 0.25
-        self.data_path = '..\Data_Source\Yahoo\Processed_Yahoo_Data\Stock_Binary_tolerance_half_std\ETF'
-        #self.data_path = '../Data_Source/Yahoo/Processed_Yahoo_Data/Stock_Binary_tolerance_half_std/ETF'
+        #self.data_path = '..\Data_Source\Yahoo\Processed_Yahoo_Data\Stock_Binary_tolerance_half_std\ETF'
+        self.data_path = '../Data_Source/Yahoo/Processed_Yahoo_Data/Stock_Binary_tolerance_half_std/ETF'
         #self.data_path = '../Data_Source/Dropbox'
 
         self.sentence_length = 31
-        self.batch_size = 100000
+        self.batch_size = 10000
         interval = 4
         self.pruning_threshold = 5
         self.load_positive_actions = True
@@ -207,28 +208,51 @@ class OptunaOptimizer:
         if (algorithm == 'gx_boosx_objective'):
             print("XGBoost_Objective")
             study.optimize(self.xg_boost_objective, n_trials=n_trials)
-            trial = study.best_trial
             print("Number of finished trials: ", len(study.trials))
+            trial = study.best_trial
+            print("Best trial:")
+
+            print("  Value: {}".format(trial.value))
+            print("  Params: ")
+            for key, value in trial.params.items():
+                print("    {}: {}".format(key, value))
+
         if (algorithm == 'Random Forest'):
             print("Random Forest")
             study.optimize(self.random_forest_objective, n_trials=n_trials, callbacks=[self.pruner],
                            show_progress_bar=True)
             print("Number of finished trials: ", len(study.trials))
             trial = study.best_trials
+            fig = optuna.visualization.plot_pareto_front(study, target_names=["accuracy", "f1_score"])
+            fig.show()
+
+            fig_2 = optuna.visualization.plot_param_importances(
+                study, target=lambda t: t.values[0], target_name="accuracy"
+            )
+            fig_2.show()
+            fig_3 = optuna.visualization.plot_param_importances(
+                study, target=lambda t: t.values[1], target_name="f1_score"
+            )
+            fig_3.show()
 
 
-        print("Best trial:")
-        trial = study.best_trial
 
-        print("  Value: {}".format(trial.value))
-        print("  Params: ")
-        for key, value in trial.params.items():
-            print("    {}: {}".format(key, value))
+            trial_with_highest_accuracy = max(study.best_trials, key=lambda t: t.values[0])
+            print(f"Trial with highest accuracy: ")
+            print(f"\tnumber: {trial_with_highest_accuracy.number}")
+            print(f"\tparams: {trial_with_highest_accuracy.params}")
+            print(f"\tvalues: {trial_with_highest_accuracy.values}")
+
+            trial_with_highest_f1_score = max(study.best_trials, key=lambda t: t.values[1])
+            print(f"f1_score with highest accuracy: ")
+            print(f"\tnumber: {trial_with_highest_f1_score.number}")
+            print(f"\tparams: {trial_with_highest_f1_score.params}")
+            print(f"\tvalues: {trial_with_highest_f1_score.values}")
 
 
 if __name__ == "__main__":
     # data_path = '../Data_Source/Yahoo/Processed_Yahoo_Data/Stock_Binary_tolerance_half_std/ETFs'
     optuna_optimizer = OptunaOptimizer()
     # optuna_optimizer.load_data()
-    optuna_optimizer.run_optuna("Random Forest", n_trials=100)
+    optuna_optimizer.run_optuna("Random Forest", n_trials=5)
 
