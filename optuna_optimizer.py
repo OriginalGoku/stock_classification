@@ -207,13 +207,16 @@ class OptunaOptimizer:
         if (algorithm == 'gx_boosx_objective'):
             print("XGBoost_Objective")
             study.optimize(self.xg_boost_objective, n_trials=n_trials)
+            trial = study.best_trial
+            print("Number of finished trials: ", len(study.trials))
         if (algorithm == 'Random Forest'):
             print("Random Forest")
             study.optimize(self.random_forest_objective, n_trials=n_trials, callbacks=[self.pruner],
                            show_progress_bar=True)
+            print("Number of finished trials: ", len(study.trials))
+            trial = study.best_trials
 
 
-        print("Number of finished trials: ", len(study.trials))
         print("Best trial:")
         trial = study.best_trial
 
