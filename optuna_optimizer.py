@@ -25,23 +25,25 @@ from sklearn.metrics import classification_report
 from tqdm import tqdm
 from file_utility import FileUtility
 from load_file import YahooDataLoader
-from line_printer import LinePrinter
 from load_batch_data import BatchDataLoader
 from line_printer import LinePrinter
 
 from optuna_pruning_sklearn import StopWhenTrialKeepBeingPrunedCallback
+from sklearn.multiclass import OneVsRestClassifier
+
 
 
 class OptunaOptimizer:
     def __init__(self):
-        #self.data_path = '../Drop_Box/Dropbox'
+
         self.rounding_precision = 4
         self.test_percent = 0.25
-        #self.data_path = '..\Data_Source\Yahoo\Processed_Yahoo_Data\Stock_Binary_tolerance_half_std\ETF'
-        self.data_path = '../Data_Source/Dropbox'
+        self.data_path = '..\Data_Source\Yahoo\Processed_Yahoo_Data\Stock_Binary_tolerance_half_std\ETF'
+        #self.data_path = '../Data_Source/Yahoo/Processed_Yahoo_Data/Stock_Binary_tolerance_half_std/ETF'
+        #self.data_path = '../Data_Source/Dropbox'
 
         self.sentence_length = 31
-        self.batch_size = 1000
+        self.batch_size = 100000
         interval = 4
         self.pruning_threshold = 5
         self.load_positive_actions = True
@@ -74,14 +76,16 @@ class OptunaOptimizer:
         else:
             data, done = self.batch_data_loader.fetch_batch(self.load_positive_actions)
 
-        data_zero_and_one = data
-        #data_zero_and_one.loc[data_zero_and_one['action'] == -1, 'action'] = 2
-        final_data = data_zero_and_one[data_zero_and_one.columns[:-2]]
-        target = data_zero_and_one.action
-        self.data = final_data
-        self.target = target
 
-        print(self.target.groupby(self.target).size())
+        # data_zero_and_one = data
+        #data_zero_and_one.loc[data_zero_and_one['action'] == -1, 'action'] = 2
+        # final_data = data_zero_and_one[data_zero_and_one.columns[:-2]]
+        # target = data_zero_and_one.action
+
+        self.data = data[data.columns[:-2]]
+        self.target = data['action']
+
+        # print(self.target.groupby(self.target).size())
 
 
         # return final_data, target
@@ -98,41 +102,39 @@ class OptunaOptimizer:
             "min_samples_split": trial.suggest_int("min_samples_split", 10, 20, log=True),
             "min_samples_leaf": trial.suggest_int("min_samples_leaf", 1, 5, log=True),
             "bootstrap": trial.suggest_categorical("bootstrap", [True, False]),
-            "ccp_alpha": trial.suggest_float("ccp_alpha", 0.01, 1, log=True),
+            #"ccp_alpha": trial.suggest_float("ccp_alpha", 0.01, 1, log=True),
             #"eval_metric": "auc",
         }
         if param["bootstrap"]:
             param["max_samples"] = trial.suggest_float("max_samples", 0.01, 0.99, log=True)
 
-        model = RandomForestClassifier(**param)
+        model = OneVsRestClassifier(RandomForestClassifier(**param))
 
-        model.fit(train_x, train_y)
-        # print("Saving model ", model_name)
-        # dump(fitted_model, model_file_name)
-
-        y_pred = pd.DataFrame(model.predict(valid_x))
-        print("y_pred:")
-        print(y_pred.columns)
-        print("len: ", len(y_pred))
-        print(type(y_pred))
-        print(y_pred[y_pred[0] == 2])
-        print(y_pred.groupby(y_pred[0]).size())
-        print("=====")
-        print("y_valid:")
-        print(valid_y.groupby(valid_y).size())
-        print("len: ", len(valid_y))
-
+        fitted_model = model.fit(train_x, train_y)
         y_pred = model.predict(valid_x)
 
-
-        # model_y_score = fitted_model.predict_proba(valid_x)
+        model_y_score = fitted_model.predict_proba(valid_x)
+        # print("len model_y_score: ", len(model_y_score))
+        # print("Model_y_score")
+        model_y_score_df = pd.DataFrame(model_y_score)
+        # print('valid_y: ', valid_y)
+        # print("model_y_score_df[model_y_score_df[2]>0.6].index: ", model_y_score_df[model_y_score_df[1]>0.6].index.values)
+        # # print(valid_y.reset_index(drop=True))
+        # model_y_score_df['action']=valid_y.reset_index(drop=True).iloc[model_y_score_df[model_y_score_df[1]>0.6].index]
+        # print(model_y_score_df[model_y_score_df[1]>0.6])
+        # print('=====')
+        # print(valid_y.loc[model_y_score_df.[model_y_score_df[1]>0.6].index])
 
         # print('model_y_score: ', model_y_score)
         report = classification_report(valid_y.to_numpy(), y_pred, output_dict=True, digits=self.rounding_precision)
+
         # target_names = self.target_names,
         report_accuracy = report['accuracy']
+        f1_score = 0
+        for i in range(0, 2):
+            f1_score += report[str(i)]['f1-score']
 
-        return report_accuracy
+        return report_accuracy, f1_score
 
 
     # FYI: Objective functions can take additional arguments
@@ -197,7 +199,7 @@ class OptunaOptimizer:
     #     model = RandomForestClassifier()
 
     def run_optuna(self, algorithm, n_trials):
-        study = optuna.create_study()
+        study = optuna.create_study(directions=["maximize", "maximize"])
         #study = optuna.create_study(
             # pruner=optuna.pruners.MedianPruner(n_warmup_steps=5), direction="maximize"
         #)
@@ -207,7 +209,8 @@ class OptunaOptimizer:
             study.optimize(self.xg_boost_objective, n_trials=n_trials)
         if (algorithm == 'Random Forest'):
             print("Random Forest")
-            study.optimize(self.random_forest_objective, n_trials=n_trials, callbacks=[self.pruner])
+            study.optimize(self.random_forest_objective, n_trials=n_trials, callbacks=[self.pruner],
+                           show_progress_bar=True)
 
 
         print("Number of finished trials: ", len(study.trials))
@@ -220,7 +223,6 @@ class OptunaOptimizer:
             print("    {}: {}".format(key, value))
 
 
-# if __name__ == "__main__":
 if __name__ == "__main__":
     # data_path = '../Data_Source/Yahoo/Processed_Yahoo_Data/Stock_Binary_tolerance_half_std/ETFs'
     optuna_optimizer = OptunaOptimizer()

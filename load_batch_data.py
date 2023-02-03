@@ -70,16 +70,16 @@ class BatchDataLoader:
                 row_counter += len(loaded_data)
                 data_to_return = pd.concat([data_to_return, loaded_data])
 
-            if row_counter >= self.batch_size:
-                # if the file counter has not reached the end of the files in a folder, then increase self.file_counter
-                # so it can load the correct file in thee next call, else reset the self.file_counter to zero, if not
-                if file_counter < no_of_files_in_folder:
-                    self.file_counter = file_counter + 1
-                else:
-                    self.file_counter = 0
-                self.folder_counter = folder_counter
-                self.data_left_from_previous_call = data_to_return.iloc[self.batch_size:]
-                return data_to_return.iloc[:self.batch_size], False
+                if row_counter >= self.batch_size:
+                    # if the file counter has not reached the end of the files in a folder, then increase self.file_counter
+                    # so it can load the correct file in thee next call, else reset the self.file_counter to zero, if not
+                    if file_counter < no_of_files_in_folder:
+                        self.file_counter = file_counter + 1
+                    else:
+                        self.file_counter = 0
+                    self.folder_counter = folder_counter
+                    self.data_left_from_previous_call = data_to_return.iloc[self.batch_size:]
+                    return data_to_return.iloc[:self.batch_size], False
 
         self.file_counter = file_counter
         self.folder_counter = folder_counter
