@@ -51,7 +51,7 @@ if __name__ == '__main__':
     intervals = 4
     sentence_length = 32
     include_volatility = True
-    train_percent = 0.80
+    train_percent = 0.01
 
     file_info = {'source_data_path': data_path,
                  'save_destination_path': 'results',

@@ -135,6 +135,7 @@ class SupervisedClassifier:
         # self.model_pipeline.append(KNeighborsClassifier())
         self.model_pipeline.append(RandomForestClassifier(n_estimators=183, criterion='log_loss', max_depth=28,
                                                           bootstrap=True))
+
         # self.model_pipeline.append(DecisionTreeClassifier())
         # self.model_pipeline.append(GaussianNB())
         # self.model_pipeline.append(SGDClassifier(loss='log_loss'))
@@ -163,12 +164,12 @@ class SupervisedClassifier:
                 print('Loading model: ', model_name)
                 model = load(model_file_name)
 
-            fitted_model = model.fit(self.X_train, self.y_train)
+            #fitted_model = model.fit(self.X_train, self.y_train)
             print("Saving model ", model_name)
-            dump(fitted_model, model_file_name)
+            #dump(fitted_model, model_file_name)
 
             y_pred = model.predict(self.X_test)
-            model_y_score = fitted_model.predict_proba(self.X_test)
+            #model_y_score = fitted_model.predict_proba(self.X_test)
 
             # print('model_y_score: ', model_y_score)
             report = classification_report(self.y_test.to_numpy(), y_pred, output_dict=True,
@@ -179,9 +180,9 @@ class SupervisedClassifier:
             self.accuracy_dic[model_name].append(round(report_accuracy, self.rounding_precision))
 
             # print('Generating Confusion Matrix')
-            # confusion = confusion_matrix(self.y_test.to_numpy(), y_pred, labels=self.actions)
-            # (pd.DataFrame(confusion)).to_csv(self.report_path + "/" + model_name + '_Run_' + str(global_run_counter)
-            #                                  + '_confusion_matrix.csv')
+            confusion = confusion_matrix(self.y_test.to_numpy(), y_pred, labels=self.actions)
+            (pd.DataFrame(confusion)).to_csv(self.report_path + "/" + model_name + '_Run_' + str(global_run_counter)
+                                              + '_confusion_matrix.csv')
 
             print("Saving model results as: ", self.report_path + "/" + model_name + '_Run_' + str(global_run_counter)
                   + '_report.csv')

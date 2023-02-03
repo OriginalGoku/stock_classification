@@ -30,7 +30,8 @@ from line_printer import LinePrinter
 
 from optuna_pruning_sklearn import StopWhenTrialKeepBeingPrunedCallback
 from sklearn.multiclass import OneVsRestClassifier
-import matplotlib.pyplot as plt
+
+import joblib
 
 
 
@@ -44,7 +45,7 @@ class OptunaOptimizer:
         #self.data_path = '../Data_Source/Dropbox'
 
         self.sentence_length = 31
-        self.batch_size = 10000
+        self.batch_size = 100000
         interval = 4
         self.pruning_threshold = 5
         self.load_positive_actions = True
@@ -97,17 +98,19 @@ class OptunaOptimizer:
         train_x, valid_x, train_y, valid_y = train_test_split(self.data, self.target, test_size=0.25)
         param = {
             #"verbosity": 0,
-            "n_estimators": trial.suggest_int("n_estimators", 100, 150, log=True),
+            "n_estimators": trial.suggest_int("n_estimators", 150, 200, log=True),
             "criterion": trial.suggest_categorical("criterion", ["gini", "entropy", "log_loss"]),
-            "max_depth": trial.suggest_int("max_depth", 5, 10, log=True),
-            "min_samples_split": trial.suggest_int("min_samples_split", 10, 20, log=True),
-            "min_samples_leaf": trial.suggest_int("min_samples_leaf", 1, 5, log=True),
-            "bootstrap": trial.suggest_categorical("bootstrap", [True, False]),
+            "max_depth": trial.suggest_int("max_depth", 2, 100, log=True),
+
+            #"min_samples_split": trial.suggest_int("min_samples_split", 10, 20, log=True),
+            #"min_samples_leaf": trial.suggest_int("min_samples_leaf", 1, 5, log=True),
+            #"bootstrap": trial.suggest_categorical("bootstrap", [True, False]),
+            "bootstrap": True,
             #"ccp_alpha": trial.suggest_float("ccp_alpha", 0.01, 1, log=True),
             #"eval_metric": "auc",
         }
-        if param["bootstrap"]:
-            param["max_samples"] = trial.suggest_float("max_samples", 0.01, 0.99, log=True)
+        #if param["bootstrap"]:
+         #   param["max_samples"] = trial.suggest_float("max_samples", 0.01, 0.99, log=True)
 
         model = OneVsRestClassifier(RandomForestClassifier(**param))
 
@@ -249,10 +252,15 @@ class OptunaOptimizer:
             print(f"\tparams: {trial_with_highest_f1_score.params}")
             print(f"\tvalues: {trial_with_highest_f1_score.values}")
 
+            # save data:
+            joblib.dump(study, 'Random_Forest_'+str(n_trials)+'.pkl')
+
+            # load data:
+            # loaded_data = joblib.load(...file name)
 
 if __name__ == "__main__":
     # data_path = '../Data_Source/Yahoo/Processed_Yahoo_Data/Stock_Binary_tolerance_half_std/ETFs'
     optuna_optimizer = OptunaOptimizer()
     # optuna_optimizer.load_data()
-    optuna_optimizer.run_optuna("Random Forest", n_trials=5)
+    optuna_optimizer.run_optuna("Random Forest", n_trials=100)
 
