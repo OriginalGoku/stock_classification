@@ -36,7 +36,7 @@ import joblib
 
 
 class OptunaOptimizer:
-    def __init__(self):
+    def __init__(self, batch_size, interval):
 
         self.rounding_precision = 4
         self.test_percent = 0.25
@@ -45,8 +45,8 @@ class OptunaOptimizer:
         #self.data_path = '../Data_Source/Dropbox'
 
         self.sentence_length = 31
-        self.batch_size = 100000
-        interval = 4
+        self.batch_size = batch_size
+
         self.pruning_threshold = 5
         self.load_positive_actions = True
 
@@ -105,7 +105,7 @@ class OptunaOptimizer:
             #"min_samples_split": trial.suggest_int("min_samples_split", 10, 20, log=True),
             #"min_samples_leaf": trial.suggest_int("min_samples_leaf", 1, 5, log=True),
             #"bootstrap": trial.suggest_categorical("bootstrap", [True, False]),
-            "bootstrap": True,
+            "bootstrap": False,
             #"ccp_alpha": trial.suggest_float("ccp_alpha", 0.01, 1, log=True),
             #"eval_metric": "auc",
         }
@@ -120,7 +120,11 @@ class OptunaOptimizer:
         model_y_score = fitted_model.predict_proba(valid_x)
         # print("len model_y_score: ", len(model_y_score))
         # print("Model_y_score")
-        model_y_score_df = pd.DataFrame(model_y_score)
+
+        #model_y_score_df = pd.DataFrame(model_y_score)
+
+
+
         # print('valid_y: ', valid_y)
         # print("model_y_score_df[model_y_score_df[2]>0.6].index: ", model_y_score_df[model_y_score_df[1]>0.6].index.values)
         # # print(valid_y.reset_index(drop=True))
@@ -134,12 +138,19 @@ class OptunaOptimizer:
 
         # target_names = self.target_names,
         report_accuracy = report['accuracy']
-        f1_score = 0
-        for i in range(0, 2):
-            f1_score += report[str(i)]['f1-score']
+        #f1_score = 0
+        #for i in range(0, 2):
+         #   f1_score += report[str(i)]['f1-score']
 
-        return report_accuracy, f1_score
+        #return report_accuracy, f1_score
 
+        trial.set_user_attr(key="best_booster", value=model)
+
+        return report_accuracy
+
+    def find_best_model_callback(self, study, trial):
+        if study.best_trial.number == trial.number:
+            study.set_user_attr(key="best_booster", value=trial.user_attrs["best_booster"])
 
     # FYI: Objective functions can take additional arguments
     # (https://optuna.readthedocs.io/en/stable/faq.html#objective-func-additional-args).
@@ -203,12 +214,15 @@ class OptunaOptimizer:
     #     model = RandomForestClassifier()
 
     def run_optuna(self, algorithm, n_trials):
-        study = optuna.create_study(directions=["maximize", "maximize"])
+        #study = optuna.create_study(directions=["maximize", "maximize"])
         #study = optuna.create_study(
             # pruner=optuna.pruners.MedianPruner(n_warmup_steps=5), direction="maximize"
         #)
         self.load_data(False)
         if (algorithm == 'gx_boosx_objective'):
+            study = optuna.create_study(
+                pruner=optuna.pruners.MedianPruner(n_warmup_steps=5), direction="maximize"
+                 )
             print("XGBoost_Objective")
             study.optimize(self.xg_boost_objective, n_trials=n_trials)
             print("Number of finished trials: ", len(study.trials))
@@ -221,46 +235,69 @@ class OptunaOptimizer:
                 print("    {}: {}".format(key, value))
 
         if (algorithm == 'Random Forest'):
-            print("Random Forest")
-            study.optimize(self.random_forest_objective, n_trials=n_trials, callbacks=[self.pruner],
-                           show_progress_bar=True)
+
+
+            study = optuna.create_study(
+                pruner=optuna.pruners.MedianPruner(n_warmup_steps=10), direction="maximize"
+            )
+            study.optimize(self.random_forest_objective, n_trials=n_trials, callbacks=[self.find_best_model_callback])
+            best_model = study.user_attrs["best_booster"]
+            joblib.dump(best_model, 'models/Best_Random_Forest_Model.joblib')
+            print("Starting Random Forest Optimizer")
+            study.optimize(self.random_forest_objective, n_trials=n_trials)
             print("Number of finished trials: ", len(study.trials))
-            trial = study.best_trials
-            fig = optuna.visualization.plot_pareto_front(study, target_names=["accuracy", "f1_score"])
-            fig.show()
+            trial = study.best_trial
+            print("Best trial:")
 
-            fig_2 = optuna.visualization.plot_param_importances(
-                study, target=lambda t: t.values[0], target_name="accuracy"
-            )
-            fig_2.show()
-            fig_3 = optuna.visualization.plot_param_importances(
-                study, target=lambda t: t.values[1], target_name="f1_score"
-            )
-            fig_3.show()
+            print("  Value: {}".format(trial.value))
+            print("  Params: ")
+            for key, value in trial.params.items():
+                print("    {}: {}".format(key, value))
 
 
 
-            trial_with_highest_accuracy = max(study.best_trials, key=lambda t: t.values[0])
-            print(f"Trial with highest accuracy: ")
-            print(f"\tnumber: {trial_with_highest_accuracy.number}")
-            print(f"\tparams: {trial_with_highest_accuracy.params}")
-            print(f"\tvalues: {trial_with_highest_accuracy.values}")
-
-            trial_with_highest_f1_score = max(study.best_trials, key=lambda t: t.values[1])
-            print(f"f1_score with highest accuracy: ")
-            print(f"\tnumber: {trial_with_highest_f1_score.number}")
-            print(f"\tparams: {trial_with_highest_f1_score.params}")
-            print(f"\tvalues: {trial_with_highest_f1_score.values}")
-
-            # save data:
-            joblib.dump(study, 'Random_Forest_'+str(n_trials)+'.pkl')
-
-            # load data:
-            # loaded_data = joblib.load(...file name)
+        # Multiple output
+        # if (algorithm == 'Random Forest'):
+        #     print("Random Forest")
+        #     study.optimize(self.random_forest_objective, n_trials=n_trials, callbacks=[self.pruner],
+        #                    show_progress_bar=True)
+        #     print("Number of finished trials: ", len(study.trials))
+        #     trial = study.best_trials
+        #     fig = optuna.visualization.plot_pareto_front(study, target_names=["accuracy", "f1_score"])
+        #     fig.show()
+        #
+        #     fig_2 = optuna.visualization.plot_param_importances(
+        #         study, target=lambda t: t.values[0], target_name="accuracy"
+        #     )
+        #     fig_2.show()
+        #     fig_3 = optuna.visualization.plot_param_importances(
+        #         study, target=lambda t: t.values[1], target_name="f1_score"
+        #     )
+        #     fig_3.show()
+        #
+        #
+        #
+        #     trial_with_highest_accuracy = max(study.best_trials, key=lambda t: t.values[0])
+        #     print(f"Trial with highest accuracy: ")
+        #     print(f"\tnumber: {trial_with_highest_accuracy.number}")
+        #     print(f"\tparams: {trial_with_highest_accuracy.params}")
+        #     print(f"\tvalues: {trial_with_highest_accuracy.values}")
+        #
+        #     trial_with_highest_f1_score = max(study.best_trials, key=lambda t: t.values[1])
+        #     print(f"f1_score with highest accuracy: ")
+        #     print(f"\tnumber: {trial_with_highest_f1_score.number}")
+        #     print(f"\tparams: {trial_with_highest_f1_score.params}")
+        #     print(f"\tvalues: {trial_with_highest_f1_score.values}")
+        #
+        #     # save data:
+        #     joblib.dump(study, 'Random_Forest_'+str(n_trials)+'.pkl')
+        #
+        #     # load data:
+        #     # loaded_data = joblib.load(...file name)
 
 if __name__ == "__main__":
     # data_path = '../Data_Source/Yahoo/Processed_Yahoo_Data/Stock_Binary_tolerance_half_std/ETFs'
-    optuna_optimizer = OptunaOptimizer()
+    optuna_optimizer = OptunaOptimizer(3000, 4)
     # optuna_optimizer.load_data()
-    optuna_optimizer.run_optuna("Random Forest", n_trials=100)
+    optuna_optimizer.run_optuna("Random Forest", n_trials=2)
 
