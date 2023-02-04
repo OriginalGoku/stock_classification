@@ -104,13 +104,13 @@ class OptunaOptimizer:
 
             #"min_samples_split": trial.suggest_int("min_samples_split", 10, 20, log=True),
             #"min_samples_leaf": trial.suggest_int("min_samples_leaf", 1, 5, log=True),
-            #"bootstrap": trial.suggest_categorical("bootstrap", [True, False]),
-            "bootstrap": False,
+            "bootstrap": trial.suggest_categorical("bootstrap", [True, False]),
+            #"bootstrap": False,
             #"ccp_alpha": trial.suggest_float("ccp_alpha", 0.01, 1, log=True),
             #"eval_metric": "auc",
         }
-        #if param["bootstrap"]:
-         #   param["max_samples"] = trial.suggest_float("max_samples", 0.01, 0.99, log=True)
+        if param["bootstrap"]:
+            param["max_samples"] = trial.suggest_float("max_samples", 0.01, 0.99, log=True)
 
         model = OneVsRestClassifier(RandomForestClassifier(**param))
 
@@ -236,16 +236,18 @@ class OptunaOptimizer:
 
         if (algorithm == 'Random Forest'):
 
-
+            print("Starting Random Forest Optimizer")
             study = optuna.create_study(
                 pruner=optuna.pruners.MedianPruner(n_warmup_steps=10), direction="maximize"
             )
             study.optimize(self.random_forest_objective, n_trials=n_trials, callbacks=[self.find_best_model_callback])
             best_model = study.user_attrs["best_booster"]
             joblib.dump(best_model, 'models/Best_Random_Forest_Model.joblib')
-            print("Starting Random Forest Optimizer")
-            study.optimize(self.random_forest_objective, n_trials=n_trials)
-            print("Number of finished trials: ", len(study.trials))
+
+            fig = optuna.visualization.plot_param_importances(study)
+            fig.show()
+
+            #print("Number of finished trials: ", len(study.trials))
             trial = study.best_trial
             print("Best trial:")
 
@@ -253,6 +255,7 @@ class OptunaOptimizer:
             print("  Params: ")
             for key, value in trial.params.items():
                 print("    {}: {}".format(key, value))
+
 
 
 
@@ -297,7 +300,7 @@ class OptunaOptimizer:
 
 if __name__ == "__main__":
     # data_path = '../Data_Source/Yahoo/Processed_Yahoo_Data/Stock_Binary_tolerance_half_std/ETFs'
-    optuna_optimizer = OptunaOptimizer(3000, 4)
+    optuna_optimizer = OptunaOptimizer(20000, 4)
     # optuna_optimizer.load_data()
-    optuna_optimizer.run_optuna("Random Forest", n_trials=2)
+    optuna_optimizer.run_optuna("Random Forest", n_trials=100)
 
