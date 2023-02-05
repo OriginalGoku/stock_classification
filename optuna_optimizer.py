@@ -100,17 +100,17 @@ class OptunaOptimizer:
             #"verbosity": 0,
             "n_estimators": trial.suggest_int("n_estimators", 150, 200, log=True),
             "criterion": trial.suggest_categorical("criterion", ["gini", "entropy", "log_loss"]),
-            "max_depth": trial.suggest_int("max_depth", 2, 100, log=True),
+            "max_depth": trial.suggest_int("max_depth", 2, 150, log=True),
 
             #"min_samples_split": trial.suggest_int("min_samples_split", 10, 20, log=True),
             #"min_samples_leaf": trial.suggest_int("min_samples_leaf", 1, 5, log=True),
-            "bootstrap": trial.suggest_categorical("bootstrap", [True, False]),
-            #"bootstrap": False,
+            #"bootstrap": trial.suggest_categorical("bootstrap", [True, False]),
+            "bootstrap": False,
             #"ccp_alpha": trial.suggest_float("ccp_alpha", 0.01, 1, log=True),
             #"eval_metric": "auc",
         }
-        if param["bootstrap"]:
-            param["max_samples"] = trial.suggest_float("max_samples", 0.01, 0.99, log=True)
+        #if param["bootstrap"]:
+         #   param["max_samples"] = trial.suggest_float("max_samples", 0.01, 0.99, log=True)
 
         model = OneVsRestClassifier(RandomForestClassifier(**param))
 
@@ -240,7 +240,8 @@ class OptunaOptimizer:
             study = optuna.create_study(
                 pruner=optuna.pruners.MedianPruner(n_warmup_steps=10), direction="maximize"
             )
-            study.optimize(self.random_forest_objective, n_trials=n_trials, callbacks=[self.find_best_model_callback])
+            study.optimize(self.random_forest_objective, n_trials=n_trials, callbacks=[self.find_best_model_callback],
+                           gc_after_trial=True)
             best_model = study.user_attrs["best_booster"]
             joblib.dump(best_model, 'models/Best_Random_Forest_Model.joblib')
 
